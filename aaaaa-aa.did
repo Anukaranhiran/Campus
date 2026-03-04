@@ -1,0 +1,115 @@
+import Map "mo:core/Map";
+import Runtime "mo:core/Runtime";
+import Array "mo:core/Array";
+import Principal "mo:core/Principal";
+import Iter "mo:core/Iter";
+import Order "mo:core/Order";
+
+actor {
+  type StudentProfile = {
+    id : Text;
+    branch : Text; // CS, IT, Civil, Mechanical, Electronics
+    year : Nat; // 1 - 4
+    skills : [Text];
+    interests : [Text];
+  };
+
+  module StudentProfile {
+    public func compare(p1 : StudentProfile, p2 : StudentProfile) : Order.Order {
+      Text.compare(p1.id, p2.id);
+    };
+  };
+
+  type CareerSuggestion = {
+    skillRoadmap : [Text];
+    internshipDomains : [Text];
+    projectIdeas : [Text];
+    studyPlan : [Text];
+    resumeTips : [Text];
+  };
+
+  type AttendanceInput = {
+    totalClasses : Nat;
+    attendedClasses : Nat;
+    remainingClasses : Nat;
+  };
+
+  type AttendanceRisk = {
+    percentage : Float;
+    riskLevel : Text; // Safe, Warning, Critical
+    classesNeeded : Nat;
+  };
+
+  let students = Map.empty<Text, StudentProfile>();
+  let suggestions = Map.empty<Text, CareerSuggestion>();
+
+  public shared ({ caller }) func addStudent(profile : StudentProfile) : async () {
+    if (students.containsKey(profile.id)) {
+      Runtime.trap("This id is already taken. Please choose another one.");
+    };
+    students.add(profile.id, profile);
+  };
+
+  public shared ({ caller }) func addCareerSuggestion(studentId : Text, suggestion : CareerSuggestion) : async () {
+    if (
+      students.containsKey(studentId) == false
+    ) { Runtime.trap("Student not found. Cannot add suggestion.") };
+    suggestions.add(studentId, suggestion);
+  };
+
+  public query ({ caller }) func getStudentProfile(id : Text) : async StudentProfile {
+    switch (students.get(id)) {
+      case (null) { Runtime.trap("Student does not exist") };
+      case (?profile) { profile };
+    };
+  };
+
+  public query ({ caller }) func getCareerSuggestion(id : Text) : async CareerSuggestion {
+    switch (suggestions.get(id)) {
+      case (null) { Runtime.trap("No suggestions found for student") };
+      case (?suggestion) { suggestion };
+    };
+  };
+
+  public query ({ caller }) func getAllStudents() : async [StudentProfile] {
+    students.values().toArray().sort();
+  };
+
+  public query ({ caller }) func calculateAttendanceRisk(input : AttendanceInput) : async AttendanceRisk {
+    let total = input.totalClasses;
+    let attended = input.attendedClasses;
+    let remaining = input.remainingClasses;
+
+    if (total == 0) {
+      Runtime.trap("Total classes cannot be zero");
+    };
+
+    let currentPercentage : Float = (attended.toFloat() / total.toFloat()) * 100.0;
+    var classesNeeded : Nat = 0;
+
+    if (currentPercentage < 75.0) {
+      var tempAttended = attended;
+      var tempTotal = total;
+      var tempPercentage = currentPercentage;
+
+      while (tempPercentage < 75.0 and classesNeeded < remaining) {
+        tempAttended += 1;
+        tempTotal += 1;
+        tempPercentage := (tempAttended.toFloat() / tempTotal.toFloat()) * 100.0 : Float;
+        classesNeeded += 1;
+      };
+    };
+
+    let riskLevel = if (currentPercentage >= 80.0) {
+      "Safe";
+    } else if (currentPercentage >= 75.0) {
+      "Warning";
+    } else { "Critical" };
+
+    {
+      percentage = currentPercentage;
+      riskLevel;
+      classesNeeded;
+    };
+  };
+};

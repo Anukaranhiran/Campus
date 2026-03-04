@@ -1,0 +1,60 @@
+import { Toaster } from "@/components/ui/sonner";
+import { useState } from "react";
+import type { CareerSuggestion, StudentProfile } from "./backend.d";
+import HeroSection from "./components/HeroSection";
+import ResultsDashboard from "./components/ResultsDashboard";
+import StudentForm from "./components/StudentForm";
+
+type AppView = "hero" | "form" | "results";
+
+export interface GeneratedData {
+  profile: StudentProfile;
+  suggestion: CareerSuggestion;
+}
+
+export default function App() {
+  const [view, setView] = useState<AppView>("hero");
+  const [generatedData, setGeneratedData] = useState<GeneratedData | null>(
+    null,
+  );
+
+  const handleGetStarted = () => {
+    setView("form");
+    setTimeout(() => {
+      document
+        .getElementById("student-form")
+        ?.scrollIntoView({ behavior: "smooth" });
+    }, 50);
+  };
+
+  const handleFormComplete = (data: GeneratedData) => {
+    setGeneratedData(data);
+    setView("results");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const handleReset = () => {
+    setGeneratedData(null);
+    setView("form");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  return (
+    <div className="min-h-screen bg-mesh font-sans">
+      <Toaster position="top-right" theme="dark" />
+
+      {view === "hero" && <HeroSection onGetStarted={handleGetStarted} />}
+
+      {view === "form" && (
+        <div id="student-form">
+          <HeroSection onGetStarted={handleGetStarted} compact />
+          <StudentForm onComplete={handleFormComplete} />
+        </div>
+      )}
+
+      {view === "results" && generatedData && (
+        <ResultsDashboard data={generatedData} onReset={handleReset} />
+      )}
+    </div>
+  );
+}
